@@ -1,57 +1,56 @@
-
-import Seachbox from "./component/searchBox";
+import SearchBar from "./components/SearchBox";
+import MovieCard from "./components/MovieCard";
 
 type Movie = {
   id: number;
   title: string;
-  poster_path: string;
+  poster_path: string | null;
+  release_date: string;
   vote_average: number;
 };
 
-export default async function MoviesPage() {
-  const res = await fetch(
-    "http://localhost:3000/api/v1/movies/listMovies",
-    { cache: "no-store" }
-  );
+type HomePageProps = {
+  searchParams: Promise<{
+    query?: string;
+  }>;
+};
 
-  const data = await res.json();
+async function getMovies(query?: string) {
+  const url = query ? `http://localhost:3000/api/v1/movies/search?query=${encodeURIComponent(query)}`
+    : `http://localhost:3000/api/v1/movies/listMovies`;
 
-  // ✅ FIXED LINE (important)
-  const movies: Movie[] = data?.data?.results ?? [];
+  const res = await fetch(url);
+
+
+  const json = await res.json();
+  return json.data?.results || [];
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = await searchParams;  
+  const query = params.query;
+
+  const movies: Movie[] = await getMovies(query);
 
   return (
-    
-    <main style={{ padding: "20px" }}>
-      <Seachbox></Seachbox>
-      <h1>Movies</h1>
+    <main className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mb-6">
+        <SearchBar />
+      </div>
 
-      {movies.length === 0 && <p>No movies found</p>}
+      <h2 className="mb-6 text-xl font-semibold text-gray-900">
+        {query ? `Search results for "${query}"` : "Popular Movies"}
+      </h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "20px",
-        }}
-      >
+      {movies.length === 0 && (
+        <p className="text-sm text-gray-600">
+          No movies found.
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {movies.map((movie) => (
-          <div
-            key={movie.id}
-            style={{
-              border: "1px solid #ddd",
-              padding: "10px",
-              borderRadius: "8px",
-            }}
-          >
-            <img
-              src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-              alt={movie.title}
-              style={{ width: "100%", borderRadius: "6px" }}
-            />
-
-            <h3>{movie.title}</h3>
-            <p>⭐ {movie.vote_average}</p>
-          </div>
+          <MovieCard key={movie.id} movie={movie} />
         ))}
       </div>
     </main>
